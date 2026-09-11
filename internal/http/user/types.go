@@ -1,4 +1,4 @@
-package types
+package user
 
 import "github.com/google/uuid"
 
@@ -6,6 +6,6 @@ type User struct {
 	ID       uuid.UUID
 	Name     string
 	Email    string
-	password string
+	Password string
 	Role     string
 }
