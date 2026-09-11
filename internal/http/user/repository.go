@@ -71,3 +71,42 @@ func (r *Repository) CreateUser(
 	}
 	return &user, nil
 }
+
+func (r *Repository) GetUserBYEmail(
+	ctx context.Context,
+	email string,
+) (*User, error) {
+	query :=
+		`
+	SELECT id,name,email,password,role
+	FROM users
+	WHERE email =$1
+	`
+
+	var user User
+
+	//.scan() -> standard method used to copy data from database rows into go variables
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		email,
+	).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.Password,
+		&user.Role,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("user not found")
+		}
+
+		return nil, err
+	}
+
+	return &user, nil
+
+}

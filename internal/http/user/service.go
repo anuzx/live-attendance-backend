@@ -2,7 +2,9 @@ package user
 
 import (
 	"context"
+	"errors"
 
+	"github.com/anuzx/live-attendance-backend/internal/auth"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -40,4 +42,28 @@ func (s *Service) Signup(
 		string(passwordHash),
 		role,
 	)
+}
+
+func (s *Service) Login(ctx context.Context, email string, password string) (*User, string, error) {
+
+	user, err := s.repository.GetUserBYEmail(ctx, email)
+
+	if err != nil {
+		return nil, "", errors.New("Invalid email or password")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+
+	if err != nil {
+		return nil, "", errors.New("Invalid email or password")
+	}
+
+	//generate the token after password verification
+	token, err := auth.GenerateToken(user.ID, user.Role)
+
+	if err != nil {
+		return nil, "", err
+	}
+
+	return user, token, nil
 }

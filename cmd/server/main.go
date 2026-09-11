@@ -15,7 +15,7 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
-	
+
 	databaseURL := os.Getenv("DATABASE_URL")
 
 	if databaseURL == "" {
@@ -42,6 +42,7 @@ func main() {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/signup", userHandler.Signup)
+		auth.POST("/login", userHandler.Login)
 	}
 
 	//start server
