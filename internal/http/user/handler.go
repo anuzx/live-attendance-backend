@@ -131,6 +131,46 @@ func (h *Handler) Login(c *gin.Context) {
 
 }
 
-func Me(c *gin.Context) {
+func (h *Handler) Me(c *gin.Context) {
 
+	value, exists := c.Get("userId")
+
+	if !exists {
+		response.ApiError(
+			c,
+			http.StatusUnauthorized,
+			"Unauthorized, token missing or invalid",
+		)
+		return
+	}
+
+	userID, ok := value.(uuid.UUID)
+
+	if !ok {
+		response.ApiError(
+			c,
+			http.StatusUnauthorized,
+			"Unauthorized, token missing or invalid",
+		)
+		return
+	}
+
+	user, err := h.service.GetMe(c.Request.Context(), userID)
+
+	if err != nil {
+		response.ApiError(c, http.StatusUnauthorized, "Unauthorized, token missing or invalid")
+
+		return
+	}
+
+	response.ApiResponse(
+		c,
+		http.StatusOK,
+		SignupResponse{
+			ID:    user.ID,
+			Name:  user.Name,
+			Email: user.Email,
+			Role:  user.Role,
+		},
+	)
 }

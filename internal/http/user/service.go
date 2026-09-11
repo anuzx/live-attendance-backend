@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/anuzx/live-attendance-backend/internal/auth"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -66,4 +67,12 @@ func (s *Service) Login(ctx context.Context, email string, password string) (*Us
 	}
 
 	return user, token, nil
+}
+
+func (s *Service) GetMe(
+	ctx context.Context,
+	userID uuid.UUID,
+) (*User, error) {
+
+	return s.repository.GetUserByID(ctx, userID)
 }

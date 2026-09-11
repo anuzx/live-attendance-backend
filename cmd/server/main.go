@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/anuzx/live-attendance-backend/internal/auth"
 	"github.com/anuzx/live-attendance-backend/internal/database"
 	"github.com/anuzx/live-attendance-backend/internal/http/user"
 	"github.com/gin-gonic/gin"
@@ -38,11 +39,14 @@ func main() {
 
 	router := gin.Default()
 
+	authMiddleware := auth.AuthMiddleware()
+
 	//routes
-	auth := router.Group("/auth")
+	authRoutes := router.Group("/auth")
 	{
-		auth.POST("/signup", userHandler.Signup)
-		auth.POST("/login", userHandler.Login)
+		authRoutes.POST("/signup", userHandler.Signup)
+		authRoutes.POST("/login", userHandler.Login)
+		authRoutes.GET("/me", authMiddleware, userHandler.Me)
 	}
 
 	//start server

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -109,4 +110,38 @@ func (r *Repository) GetUserBYEmail(
 
 	return &user, nil
 
+}
+
+func (r *Repository) GetUserByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*User, error) {
+
+	query := `
+          SELECT id , name , email , role
+          FROM users
+          WHERE id = $1
+	`
+
+	var user User
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		id,
+	).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.Role,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("User not found")
+		}
+		return nil, err
+	}
+
+	return &user, nil
 }
