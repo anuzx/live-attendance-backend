@@ -1,0 +1,8 @@
+services:
+  postgres:
+    image: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD=mysecretpassword
+    ports:
+      - "5432:5432"
