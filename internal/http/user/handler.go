@@ -19,24 +19,6 @@ func NewHandler(service *Service) *Handler {
 	}
 }
 
-type SignupRequest struct {
-	Name     string `json:"name" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
-	Role     string `json:"role" binding:"required,oneof=student teacher"`
-}
-
-type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
-}
-
-type SignupResponse struct {
-	ID    uuid.UUID `json:"_id"`
-	Name  string    `json:"name"`
-	Email string    `json:"email"`
-	Role  string    `json:"role"`
-}
 
 func (h *Handler) Signup(c *gin.Context) {
 	var req SignupRequest
@@ -98,7 +80,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	}
 
-	user, token, err := h.service.Login(
+	token, err := h.service.Login(
 		c.Request.Context(),
 		req.Email,
 		req.Password,
@@ -120,12 +102,6 @@ func (h *Handler) Login(c *gin.Context) {
 		http.StatusOK,
 		gin.H{
 			"token": token,
-			"user": SignupResponse{
-				ID:    user.ID,
-				Name:  user.Name,
-				Email: user.Email,
-				Role:  user.Role,
-			},
 		},
 	)
 

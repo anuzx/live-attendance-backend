@@ -45,28 +45,28 @@ func (s *Service) Signup(
 	)
 }
 
-func (s *Service) Login(ctx context.Context, email string, password string) (*User, string, error) {
+func (s *Service) Login(ctx context.Context, email string, password string) (string, error) {
 
 	user, err := s.repository.GetUserBYEmail(ctx, email)
 
 	if err != nil {
-		return nil, "", errors.New("Invalid email or password")
+		return "", errors.New("Invalid email or password")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 
 	if err != nil {
-		return nil, "", errors.New("Invalid email or password")
+		return "", errors.New("Invalid email or password")
 	}
 
 	//generate the token after password verification
 	token, err := auth.GenerateToken(user.ID, user.Role)
 
 	if err != nil {
-		return nil, "", err
+		return "", err
 	}
 
-	return user, token, nil
+	return token, nil
 }
 
 func (s *Service) GetMe(

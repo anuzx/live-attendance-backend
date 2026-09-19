@@ -4,4 +4,4 @@ run:
 	go run ./cmd/server
 
 migrate:
-	docker exec -i live-attendance-backend-postgres-1 psql -U postgres -d postgres < migrations/01_auth.sql
+	docker exec -i my_db psql -U postgres -d postgres < migrations/tables.sql

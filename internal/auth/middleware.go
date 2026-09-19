@@ -77,6 +77,26 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		c.Set("userId", userID)
+		c.Set("role", claims["role"])
+
+		c.Next()
+	}
+}
+
+func OnlyTeacher() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+
+		if !exists || role != "teacher" {
+			response.ApiError(
+				c,
+				http.StatusForbidden,
+				"Forbidden, teacher access required",
+			)
+
+			c.Abort()
+			return
+		}
 
 		c.Next()
 	}

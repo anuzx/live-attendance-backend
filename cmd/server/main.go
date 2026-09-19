@@ -6,6 +6,7 @@ import (
 
 	"github.com/anuzx/live-attendance-backend/internal/auth"
 	"github.com/anuzx/live-attendance-backend/internal/database"
+	"github.com/anuzx/live-attendance-backend/internal/http/class"
 	"github.com/anuzx/live-attendance-backend/internal/http/user"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -32,10 +33,15 @@ func main() {
 
 	defer db.Close()
 
-	// Dependency wiring
+	// Dependency wiring for auth endpoints
 	userRepository := user.NewRepository(db)
 	userService := user.NewService(userRepository)
 	userHandler := user.NewHandler(userService)
+
+	//class endpoints
+	classRepo := class.NewRepository(db)
+	classService := class.NewService(classRepo)
+	classHandler := class.NewHandler(classService)
 
 	router := gin.Default()
 
@@ -49,9 +55,22 @@ func main() {
 		authRoutes.GET("/me", authMiddleware, userHandler.Me)
 	}
 
+	classRoutes := router.Group("/class")
+	{
+		classRoutes.POST("/", authMiddleware, auth.OnlyTeacher(), classHandler.CreateClass)
+		classRoutes.POST("/:id/add-student", authMiddleware)
+		classRoutes.GET("/:id", authMiddleware)
+		classRoutes.GET("/:id/my-attendance", authMiddleware)
+
+	}
+
 	//start server
 	if err := router.Run(":3000"); err != nil {
 		log.Fatalf("failed to run server: %v", err)
 	}
 
 }
+
+/**
+ * type -> repository -> service -> handler -> route
+ */
