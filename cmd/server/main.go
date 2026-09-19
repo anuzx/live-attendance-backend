@@ -58,7 +58,7 @@ func main() {
 	classRoutes := router.Group("/class")
 	{
 		classRoutes.POST("/", authMiddleware, auth.OnlyTeacher(), classHandler.CreateClass)
-		classRoutes.POST("/:id/add-student", authMiddleware)
+		classRoutes.POST("/:id/add-student", authMiddleware, auth.OnlyTeacher(), classHandler.AddStudent)
 		classRoutes.GET("/:id", authMiddleware)
 		classRoutes.GET("/:id/my-attendance", authMiddleware)
 

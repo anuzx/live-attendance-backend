@@ -40,7 +40,7 @@ func (h *Handler) CreateClass(c *gin.Context) {
 			"Unauthorized, token missing or invalid",
 		)
 
-		return 
+		return
 	}
 
 	teacherID, ok := value.(uuid.UUID)
@@ -65,4 +65,61 @@ func (h *Handler) CreateClass(c *gin.Context) {
 		class,
 	)
 
+}
+
+func (h *Handler) AddStudent(c *gin.Context) {
+	var req AddStudentRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ApiError(
+			c,
+			http.StatusBadRequest,
+			"Invalid request schema",
+		)
+		return
+	}
+
+	classId, err := uuid.Parse(c.Param("id"))
+
+	if err != nil {
+		response.ApiError(c, http.StatusNotFound, "Class not found")
+		return
+	}
+
+	value, exists := c.Get("userId")
+
+	if !exists {
+		response.ApiError(
+			c,
+			http.StatusUnauthorized,
+			"Unauthorized, token missing or invalid",
+		)
+
+		return
+	}
+
+	teacherID, ok := value.(uuid.UUID)
+
+	if !ok {
+		return
+	}
+
+	studentID, err := uuid.Parse(req.StudentID)
+	if err != nil {
+		response.ApiError(c, http.StatusNotFound, "Student not found")
+		return
+	}
+
+	class, err := h.service.AddStudent(c, classId, teacherID, studentID)
+
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	response.ApiResponse(
+		c,
+		http.StatusOK,
+		class,
+	)
 }
