@@ -121,3 +121,15 @@ func (s *Service) GetMyAttendance(
 
 	return &MyAttendance{ClassID: classID, Status: status}, nil
 }
+
+func (s *Service) GetClassByID(
+	ctx context.Context,
+	id uuid.UUID,
+
+) (*Class, error) {
+
+	return s.repository.GetClassByID(
+		ctx,
+		id,
+	)
+}

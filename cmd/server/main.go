@@ -6,7 +6,9 @@ import (
 
 	"github.com/anuzx/live-attendance-backend/internal/auth"
 	"github.com/anuzx/live-attendance-backend/internal/database"
+	"github.com/anuzx/live-attendance-backend/internal/http/attendance"
 	"github.com/anuzx/live-attendance-backend/internal/http/class"
+	"github.com/anuzx/live-attendance-backend/internal/http/students"
 	"github.com/anuzx/live-attendance-backend/internal/http/user"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -43,6 +45,16 @@ func main() {
 	classService := class.NewService(classRepo)
 	classHandler := class.NewHandler(classService)
 
+	//students endpoint
+	studentRepo := students.NewRepository(db)
+	studentService := students.NewService(studentRepo)
+	studentHandler := students.NewHandler(studentService)
+
+	//attendance endpoint
+	store := attendance.NewSessionStore()
+	attService := attendance.NewService(classService, store)
+	attHandler := attendance.NewHandler(attService)
+
 	router := gin.Default()
 
 	authMiddleware := auth.AuthMiddleware()
@@ -64,9 +76,9 @@ func main() {
 
 	}
 
-	router.GET("/students", authMiddleware, auth.OnlyTeacher())
+	router.GET("/students", authMiddleware, auth.OnlyTeacher(), studentHandler.GetStudents)
 
-	router.POST("/attendance/start", authMiddleware, auth.OnlyTeacher())
+	router.POST("/attendance/start", authMiddleware, auth.OnlyTeacher(), attHandler.StartSession)
 
 	//start server
 	if err := router.Run(":3000"); err != nil {
