@@ -1,11 +1,14 @@
 package attendance
 
 import (
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+var ErrNoActiveSession = errors.New("no active attendance session")
 
 // const activeSession = {
 //   classId: "c101", // current active class
@@ -63,4 +66,16 @@ func (s *SessionStore) Get() (Session, bool) {
 	copied := *s.session
 	copied.Attendance = attendanceCopy
 	return copied, true
+}
+
+func (s *SessionStore) MarkAttendance(studentID, status string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.session == nil {
+		return ErrNoActiveSession
+	}
+
+	s.session.Attendance[studentID] = status
+	return nil
 }

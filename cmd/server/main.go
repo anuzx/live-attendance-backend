@@ -10,6 +10,7 @@ import (
 	"github.com/anuzx/live-attendance-backend/internal/http/class"
 	"github.com/anuzx/live-attendance-backend/internal/http/students"
 	"github.com/anuzx/live-attendance-backend/internal/http/user"
+	"github.com/anuzx/live-attendance-backend/internal/ws"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -33,6 +34,7 @@ func main() {
 		log.Fatalf("database connection failed: %v", err)
 	}
 
+
 	defer db.Close()
 
 	// Dependency wiring for auth endpoints
@@ -55,7 +57,10 @@ func main() {
 	attService := attendance.NewService(classService, store)
 	attHandler := attendance.NewHandler(attService)
 
+    hub := ws.NewHub(store)
+
 	router := gin.Default()
+	go hub.Run()
 
 	authMiddleware := auth.AuthMiddleware()
 
@@ -79,6 +84,8 @@ func main() {
 	router.GET("/students", authMiddleware, auth.OnlyTeacher(), studentHandler.GetStudents)
 
 	router.POST("/attendance/start", authMiddleware, auth.OnlyTeacher(), attHandler.StartSession)
+
+	router.GET("/ws" , hub.ServeWS)
 
 	//start server
 	if err := router.Run(":3000"); err != nil {
