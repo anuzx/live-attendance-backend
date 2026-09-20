@@ -185,3 +185,79 @@ func (r *Repository) GetStudentIds(
 
 	return studentIDs, rows.Err()
 }
+
+func (r *Repository) GetStudentByClassID(
+	ctx context.Context,
+	classID uuid.UUID,
+) ([]StudentDetails, error) {
+
+	//fetch all student details in one query, rather than one query per student
+	query := `
+		SELECT u.id, u.name, u.email
+		FROM class_students cs
+		JOIN users u
+		ON cs.student_id = u.id
+		WHERE cs.class_id = $1
+		`
+
+	rows, err := r.db.Query(
+		ctx,
+		query,
+		classID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	students := []StudentDetails{} // empty slice , so JSON gives []
+
+	for rows.Next() {
+		var s StudentDetails
+		if err := rows.Scan(&s.ID, &s.Name, &s.Email); err != nil {
+			return nil, err
+		}
+		students = append(students, s)
+	}
+	return students, rows.Err()
+}
+
+func (r *Repository) IsStudentEnrolled(ctx context.Context, classID, studentID uuid.UUID) (bool, error) {
+
+	query := `SELECT EXISTS (
+	SELECT 1 FROM class_students
+	WHERE class_id = $1 AND student_id = $2
+	)`
+
+	var enrolled bool
+
+	err := r.db.QueryRow(ctx, query, classID, studentID).Scan(&enrolled)
+
+	return enrolled, err
+}
+
+func (r *Repository) GetAttendanceStatus(
+	ctx context.Context,
+	classID, studentID uuid.UUID,
+) (*string, error) {
+
+	query := `
+	SELECT status
+	FROM attendance
+	WHERE class_id = $1 AND student_id = $2
+	`
+
+	var status string
+	err := r.db.QueryRow(ctx, query, classID, studentID).Scan(&status)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil // not persisted yet: this is a valid result, not an error
+		}
+		return nil, err
+	}
+
+	return &status, nil
+}

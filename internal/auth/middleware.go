@@ -101,3 +101,17 @@ func OnlyTeacher() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func OnlyStudent() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+
+		if !exists || role != "student" {
+			response.ApiError(c, http.StatusForbidden, "Forbidden, student access required")
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}

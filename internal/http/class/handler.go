@@ -110,7 +110,7 @@ func (h *Handler) AddStudent(c *gin.Context) {
 		return
 	}
 
-	class, err := h.service.AddStudent(c, classId, teacherID, studentID)
+	class, err := h.service.AddStudent(c.Request.Context(), classId, teacherID, studentID)
 
 	if err != nil {
 		h.handleError(c, err)
@@ -122,4 +122,52 @@ func (h *Handler) AddStudent(c *gin.Context) {
 		http.StatusOK,
 		class,
 	)
+}
+
+func (h *Handler) GetClassDetails(c *gin.Context) {
+	classId, err := uuid.Parse(c.Param("id"))
+
+	if err != nil {
+		response.ApiError(c, http.StatusNotFound, "Class not found")
+		return
+	}
+
+	userID, ok := c.MustGet("userId").(uuid.UUID)
+	if !ok {
+		response.ApiError(c, http.StatusUnauthorized, "Unauthorized, token missing or invalid")
+		return
+	}
+
+	class, err := h.service.GetClassDetails(c.Request.Context(), classId, userID)
+
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	response.ApiResponse(c, http.StatusOK, class)
+}
+
+func (h *Handler) MyAttendance(c *gin.Context) {
+	classID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.ApiError(c, http.StatusNotFound, "Class not found")
+		return
+	}
+
+	studentID , ok := c.MustGet("userId").(uuid.UUID)
+
+	if !ok {
+			response.ApiError(c, http.StatusUnauthorized, "Unauthorized, token missing or invalid")
+			return
+		}
+	
+	result, err := h.service.GetMyAttendance(c.Request.Context(), classID, studentID)
+
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	
+	response.ApiResponse(c, http.StatusOK, result)
 }

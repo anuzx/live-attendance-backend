@@ -24,3 +24,21 @@ type Student struct {
 	Password string
 	Role     string
 }
+
+type StudentDetails struct {
+	ID    uuid.UUID `json:"_id"`
+	Name  string    `json:"name"`
+	Email string    `json:"email"`
+}
+
+type ClassDetails struct {
+	ID        uuid.UUID        `json:"_id"`
+	ClassName string           `json:"className"`
+	TeacherID uuid.UUID        `json:"teacherId"`
+	Students  []StudentDetails `json:"students"`
+}
+
+type MyAttendance struct {
+	ClassID uuid.UUID `json:"classId"`
+	Status  *string   `json:"status"`
+}

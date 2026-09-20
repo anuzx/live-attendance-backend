@@ -18,3 +18,11 @@ CREATE TABLE IF NOT EXISTS class_students (
 
     PRIMARY KEY (class_id , student_id)
  );
+
+CREATE TABLE IF NOT EXISTS attendance (
+     class_id   UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+     student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     status     TEXT NOT NULL CHECK (status IN ('present', 'absent')),
+
+     PRIMARY KEY (class_id, student_id)
+ );

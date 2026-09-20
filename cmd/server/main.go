@@ -59,10 +59,14 @@ func main() {
 	{
 		classRoutes.POST("/", authMiddleware, auth.OnlyTeacher(), classHandler.CreateClass)
 		classRoutes.POST("/:id/add-student", authMiddleware, auth.OnlyTeacher(), classHandler.AddStudent)
-		classRoutes.GET("/:id", authMiddleware)
-		classRoutes.GET("/:id/my-attendance", authMiddleware)
+		classRoutes.GET("/:id", authMiddleware, classHandler.GetClassDetails)
+		classRoutes.GET("/:id/my-attendance", authMiddleware, auth.OnlyStudent(), classHandler.MyAttendance)
 
 	}
+
+	router.GET("/students", authMiddleware, auth.OnlyTeacher())
+
+	router.POST("/attendance/start", authMiddleware, auth.OnlyTeacher())
 
 	//start server
 	if err := router.Run(":3000"); err != nil {
