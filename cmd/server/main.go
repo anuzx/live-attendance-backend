@@ -34,7 +34,6 @@ func main() {
 		log.Fatalf("database connection failed: %v", err)
 	}
 
-
 	defer db.Close()
 
 	// Dependency wiring for auth endpoints
@@ -53,11 +52,12 @@ func main() {
 	studentHandler := students.NewHandler(studentService)
 
 	//attendance endpoint
+	attRepo := attendance.NewRepository(db)
 	store := attendance.NewSessionStore()
-	attService := attendance.NewService(classService, store)
+	attService := attendance.NewService(classService, store, attRepo)
 	attHandler := attendance.NewHandler(attService)
 
-    hub := ws.NewHub(store)
+	hub := ws.NewHub(store, attService)
 
 	router := gin.Default()
 	go hub.Run()
@@ -85,7 +85,7 @@ func main() {
 
 	router.POST("/attendance/start", authMiddleware, auth.OnlyTeacher(), attHandler.StartSession)
 
-	router.GET("/ws" , hub.ServeWS)
+	router.GET("/ws", hub.ServeWS)
 
 	//start server
 	if err := router.Run(":3000"); err != nil {

@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -127,6 +128,12 @@ func (c *Client) handleMessage(raw []byte) {
 	switch msg.Event {
 	case "ATTENDANCE_MARKED":
 		c.handleAttendanceMarked(msg.Data)
+	case "TODAY_SUMMARY":
+		c.handleTodaySummary()
+	case "MY_ATTENDANCE":
+		c.handleMyAttendance()
+	case "DONE":
+		c.handleDone()
 	default:
 		c.sendError("Unknown event")
 	}
@@ -147,7 +154,33 @@ func (c *Client) handleAttendanceMarked(raw json.RawMessage) {
 		return
 	}
 
-	// 2 + 3. needs an active session; updates memory
+	studentID, err := uuid.Parse(data.StudentID)
+	if err != nil {
+		c.sendError("Invalid message format")
+		return
+	}
+
+	// 2. needs an active session
+	session, ok := c.hub.store.Get()
+	if !ok {
+		c.sendError("No active attendance session")
+		return
+	}
+
+	// 3. the student must actually be enrolled in the active class
+	enrolled, err := c.hub.attendanceSvc.IsStudentEnrolled(
+		context.Background(), session.ClassID, studentID)
+	if err != nil {
+		log.Printf("check enrollment: %v", err)
+		c.sendError("Internal server error")
+		return
+	}
+	if !enrolled {
+		c.sendError("Student is not enrolled in the active class")
+		return
+	}
+
+	// 4. record it in memory
 	if err := c.hub.store.MarkAttendance(data.StudentID, data.Status); err != nil {
 		if errors.Is(err, attendance.ErrNoActiveSession) {
 			c.sendError("No active attendance session")
@@ -158,6 +191,86 @@ func (c *Client) handleAttendanceMarked(raw json.RawMessage) {
 		return
 	}
 
-	// 4. broadcast to everyone
-	c.hub.Broadcast(encode("ATTENDANCE_MARKED", data))
+	// 5. broadcast to everyone
+	c.hub.Broadcast(encode("ATTENDANCE_MARKED", data), c)
+}
+
+func (c *Client) handleTodaySummary() {
+	// 1. teacher only
+	if c.role != "teacher" {
+		c.sendError("Forbidden, teacher event only")
+		return
+	}
+
+	// 2. calculate from the in-memory session
+	present, absent, total, err := c.hub.store.Summary()
+	if err != nil {
+		if errors.Is(err, attendance.ErrNoActiveSession) {
+			c.sendError("No active attendance session")
+			return
+		}
+		log.Printf("today summary: %v", err)
+		c.sendError("Internal server error")
+		return
+	}
+
+	// 3. broadcast to everyone
+	c.hub.Broadcast(encode("TODAY_SUMMARY", SummaryData{
+		Present: present,
+		Absent:  absent,
+		Total:   total,
+	}), c)
+}
+
+func (c *Client) handleMyAttendance() {
+	// 1. student only
+	if c.role != "student" {
+		c.sendError("Forbidden, student event only")
+		return
+	}
+
+	// 2. look up this student's status
+	status, err := c.hub.store.GetStatus(c.userID.String())
+	if err != nil {
+		if errors.Is(err, attendance.ErrNoActiveSession) {
+			c.sendError("No active attendance session")
+			return
+		}
+		log.Printf("my attendance: %v", err)
+		c.sendError("Internal server error")
+		return
+	}
+
+	// 3. unicast: only this client's own queue
+	c.enqueue(encode("MY_ATTENDANCE", MyAttendanceData{Status: status}))
+}
+
+func (c *Client) handleDone() {
+	// 1. teacher only
+	if c.role != "teacher" {
+		c.sendError("Forbidden, teacher event only")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	summary, err := c.hub.attendanceSvc.FinishSession(ctx)
+	if err != nil {
+		if errors.Is(err, attendance.ErrNoActiveSession) {
+			c.sendError("No active attendance session")
+			return
+		}
+		log.Printf("finish session: %v", err)
+		c.sendError("Internal server error")
+		return
+	}
+
+	// 7. broadcast to everyone
+	c.hub.Broadcast(encode("DONE", DoneData{
+		Message: "Attendance persisted",
+		Present: summary.Present,
+		Absent:  summary.Absent,
+		Total:   summary.Total,
+	}), c)
 }

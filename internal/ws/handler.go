@@ -20,15 +20,14 @@ var wss = websocket.Upgrader{
 }
 
 func (h *Hub) ServeWS(c *gin.Context) {
-	conn, err := wss.Upgrade(c.Writer, c.Request, nil)
-
-	if err != nil {
-		return
-	}
-
 	userID, role, err := auth.ParseToken(c.Query("token"))
+
 	if err != nil {
-		// The doc says: send ERROR, then close.
+		// invalid token: upgrade only to send ERROR and close, as before
+		conn, upErr := wss.Upgrade(c.Writer, c.Request, nil)
+		if upErr != nil {
+			return
+		}
 		conn.WriteMessage(websocket.TextMessage,
 			encode("ERROR", ErrorData{Message: "Unauthorized or invalid token"}))
 		conn.WriteControl(
@@ -40,9 +39,20 @@ func (h *Hub) ServeWS(c *gin.Context) {
 		return
 	}
 
-	client := newClient(h, conn, userID, role)
+	// register first, then upgrade: the 101 response (and therefore the
+	// client's "open" event) is only written after registration, so a
+	// connection is always broadcast-ready by the time it can send messages.
+	// Queued broadcasts are buffered in c.send until writePump starts.
+	client := newClient(h, nil, userID, role)
 	h.register <- client
 
+	conn, err := wss.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		h.unregister <- client
+		return
+	}
+
+	client.conn = conn
 	go client.writePump()
 	go client.readPump()
 }

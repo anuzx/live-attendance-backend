@@ -10,16 +10,14 @@ import (
 
 var ErrNoActiveSession = errors.New("no active attendance session")
 
-// const activeSession = {
-//   classId: "c101", // current active class
-//   startedAt: "2025-03-11T10:00:00.000Z", // ISO string
-//   attendance: {
-//     "s100": "present",
-//     "s101": "absent"
-//     // studentId: status
-//   }
-// };
-
+//	const activeSession = {
+//	  classId: "c101", // current active class
+//	  startedAt: "2025-03-11T10:00:00.000Z", // ISO string
+//	  attendance: {
+//	    "s100": "present",
+//	    "s101": "absent"
+//	    // studentId: status
+//	};
 type Session struct {
 	ClassID    uuid.UUID
 	StartedAt  string            //ISO string
@@ -32,6 +30,7 @@ type SessionStore struct {
 	session *Session
 }
 
+// factory function
 func NewSessionStore() *SessionStore {
 	return &SessionStore{}
 }
@@ -78,4 +77,46 @@ func (s *SessionStore) MarkAttendance(studentID, status string) error {
 
 	s.session.Attendance[studentID] = status
 	return nil
+}
+
+func (s *SessionStore) Summary() (present, absent, total int, err error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.session == nil {
+		return 0, 0, 0, ErrNoActiveSession
+	}
+
+	for _, status := range s.session.Attendance {
+		switch status {
+		case "present":
+			present++
+		case "absent":
+			absent++
+		}
+	}
+
+	return present, absent, present + absent, nil
+}
+
+func (s *SessionStore) GetStatus(studentID string) (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.session == nil {
+		return "", ErrNoActiveSession
+	}
+
+	status, ok := s.session.Attendance[studentID]
+	if !ok {
+		return "not yet updated", nil
+	}
+
+	return status, nil
+}
+
+func (s *SessionStore) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.session = nil
 }

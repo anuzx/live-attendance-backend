@@ -111,7 +111,7 @@ func (s *Service) GetMyAttendance(
 		return nil, err
 	}
 	if !enrolled {
-		return nil, err
+		return nil, ErrNotEnrolled
 	}
 
 	status, err := s.repository.GetAttendanceStatus(ctx, classID, studentID)
